@@ -1,0 +1,74 @@
+:root {
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  color: #172033;
+  background: #f5f7fb;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 360px;
+  min-height: 100vh;
+  margin: 0;
+}
+
+button {
+  font: inherit;
+}
+
+.shell {
+  width: min(560px, calc(100vw - 48px));
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 18vh 0 12vh;
+}
+
+.brand-mark {
+  display: grid;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 28px;
+  place-items: center;
+  border-radius: 18px;
+  color: #ffffff;
+  background: #315efb;
+  box-shadow: 0 14px 30px rgb(49 94 251 / 22%);
+  font-size: 28px;
+}
+
+.eyebrow {
+  margin: 0 0 10px;
+  color: #315efb;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(32px, 6vw, 48px);
+  letter-spacing: -0.04em;
+}
+
+.subtitle {
+  max-width: 420px;
+  margin: 20px 0 34px;
+  color: #657089;
+  font-size: 17px;
+  line-height: 1.7;
+}
+
+.primary-button {
+  min-width: 180px;
+  padding: 13px 20px;
+  border: 0;
+  border-radius: 12px;
+  color: #ffffff;
+  background: #aeb8ca;
+  cursor: not-allowed;
+  font-weight: 700;
+}
