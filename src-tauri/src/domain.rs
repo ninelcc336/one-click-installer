@@ -106,6 +106,10 @@ pub struct AppRelease {
     pub size_bytes: u64,
     pub sha256: String,
     pub installer_kind: InstallerKind,
+    #[serde(default)]
+    pub windows_executable: Option<String>,
+    #[serde(default)]
+    pub macos_bundle: Option<String>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
@@ -137,6 +141,10 @@ pub enum InstallError {
     LaunchFailed(String),
     #[error("创建应用入口失败: {0}")]
     EntryCreationFailed(String),
+    #[error("安装程序执行失败: {0}")]
+    InstallerFailed(String),
+    #[error("安装结果验证失败: {0}")]
+    VerificationFailed(String),
     #[error("版本清单 JSON 无效: {0}")]
     InvalidJson(String),
     #[error("版本清单无效: {0}")]

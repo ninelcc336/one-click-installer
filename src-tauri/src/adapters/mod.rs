@@ -1,0 +1,293 @@
+use crate::{
+    domain::{AppId, AppRelease, InstallError, InstalledApp, InstallerKind, Os, PlatformTarget},
+    platform::PlatformBackend,
+};
+#[cfg(target_os = "macos")]
+use std::fs;
+use std::{
+    env,
+    path::{Path, PathBuf},
+    process::Command,
+};
+
+pub mod cc_switch;
+pub mod codex;
+
+pub trait AppAdapter: Send + Sync {
+    fn id(&self) -> AppId;
+    fn candidate_paths(&self, release: &AppRelease, target: PlatformTarget) -> Vec<PathBuf>;
+    fn detect(
+        &self,
+        release: &AppRelease,
+        platform: &dyn PlatformBackend,
+    ) -> Result<Option<InstalledApp>, InstallError>;
+    fn install(
+        &self,
+        release: &AppRelease,
+        package: &Path,
+        platform: &dyn PlatformBackend,
+    ) -> Result<(), InstallError>;
+    fn verify(
+        &self,
+        release: &AppRelease,
+        platform: &dyn PlatformBackend,
+    ) -> Result<InstalledApp, InstallError>;
+    fn launch(
+        &self,
+        app: &InstalledApp,
+        platform: &dyn PlatformBackend,
+    ) -> Result<(), InstallError>;
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct DesktopAppAdapter {
+    pub app_id: AppId,
+}
+
+impl DesktopAppAdapter {
+    pub fn new(app_id: AppId) -> Self {
+        Self { app_id }
+    }
+}
+
+impl AppAdapter for DesktopAppAdapter {
+    fn id(&self) -> AppId {
+        self.app_id
+    }
+
+    fn candidate_paths(&self, release: &AppRelease, target: PlatformTarget) -> Vec<PathBuf> {
+        match target.os {
+            Os::Windows => release
+                .windows_executable
+                .as_deref()
+                .map(expand_windows_paths)
+                .unwrap_or_default(),
+            Os::Macos => release
+                .macos_bundle
+                .as_deref()
+                .map(expand_macos_paths)
+                .unwrap_or_default(),
+        }
+    }
+
+    fn detect(
+        &self,
+        release: &AppRelease,
+        platform: &dyn PlatformBackend,
+    ) -> Result<Option<InstalledApp>, InstallError> {
+        let target = platform.target();
+        Ok(self
+            .candidate_paths(release, target)
+            .into_iter()
+            .find(|path| path.exists())
+            .map(|executable| InstalledApp {
+                app_id: self.app_id,
+                version: "unknown".to_owned(),
+                executable,
+            }))
+    }
+
+    fn install(
+        &self,
+        release: &AppRelease,
+        package: &Path,
+        platform: &dyn PlatformBackend,
+    ) -> Result<(), InstallError> {
+        match (platform.target().os, release.installer_kind) {
+            (Os::Windows, InstallerKind::WindowsExe) => run_command(package, &[]),
+            (Os::Windows, InstallerKind::WindowsMsi) => run_command(
+                Path::new("msiexec.exe"),
+                &["/i", package.to_string_lossy().as_ref()],
+            ),
+            (Os::Macos, InstallerKind::MacosPkg) => run_command(
+                Path::new("/usr/sbin/installer"),
+                &[
+                    "-pkg",
+                    package.to_string_lossy().as_ref(),
+                    "-target",
+                    "CurrentUserHomeDirectory",
+                ],
+            ),
+            (Os::Macos, InstallerKind::MacosDmg) => install_macos_dmg(package, platform),
+            _ => Err(InstallError::InstallerFailed(format!(
+                "安装包类型 {:?} 与当前平台不匹配",
+                release.installer_kind
+            ))),
+        }
+    }
+
+    fn verify(
+        &self,
+        release: &AppRelease,
+        platform: &dyn PlatformBackend,
+    ) -> Result<InstalledApp, InstallError> {
+        self.detect(release, platform)?.ok_or_else(|| {
+            InstallError::VerificationFailed(format!("找不到 {} 的安装结果", self.app_id))
+        })
+    }
+
+    fn launch(
+        &self,
+        app: &InstalledApp,
+        platform: &dyn PlatformBackend,
+    ) -> Result<(), InstallError> {
+        platform.launch(&app.executable)
+    }
+}
+
+fn run_command(program: &Path, args: &[&str]) -> Result<(), InstallError> {
+    let status = Command::new(program)
+        .args(args)
+        .status()
+        .map_err(|error| InstallError::InstallerFailed(error.to_string()))?;
+    if status.success() {
+        Ok(())
+    } else {
+        Err(InstallError::InstallerFailed(format!(
+            "{} 返回退出码 {:?}",
+            program.display(),
+            status.code()
+        )))
+    }
+}
+
+fn expand_windows_paths(relative_or_absolute: &str) -> Vec<PathBuf> {
+    let path = PathBuf::from(relative_or_absolute);
+    if path.is_absolute() {
+        return vec![path];
+    }
+
+    [
+        "LOCALAPPDATA",
+        "PROGRAMFILES",
+        "PROGRAMFILES(X86)",
+        "USERPROFILE",
+    ]
+    .into_iter()
+    .filter_map(|name| env::var_os(name).map(PathBuf::from))
+    .map(|root| root.join(&path))
+    .collect()
+}
+
+fn expand_macos_paths(bundle: &str) -> Vec<PathBuf> {
+    let bundle_path = PathBuf::from(bundle);
+    if bundle_path.is_absolute() {
+        return vec![bundle_path];
+    }
+
+    let mut paths = vec![PathBuf::from("/Applications").join(&bundle_path)];
+    if let Some(home) = env::var_os("HOME") {
+        paths.push(PathBuf::from(home).join("Applications").join(bundle_path));
+    }
+    paths
+}
+
+#[cfg(target_os = "macos")]
+fn install_macos_dmg(package: &Path, platform: &dyn PlatformBackend) -> Result<(), InstallError> {
+    let output = Command::new("hdiutil")
+        .args(["attach", "-nobrowse", "-readonly", "-plist"])
+        .arg(package)
+        .output()
+        .map_err(|error| InstallError::InstallerFailed(error.to_string()))?;
+    if !output.status.success() {
+        return Err(InstallError::InstallerFailed("无法挂载 DMG".to_owned()));
+    }
+
+    let mount_point = String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .find_map(|line| line.trim().strip_prefix("<string>/Volumes/"))
+        .map(|value| PathBuf::from("/Volumes").join(value.trim_end_matches("</string>")))
+        .ok_or_else(|| InstallError::InstallerFailed("无法解析 DMG 挂载点".to_owned()))?;
+    let result = copy_first_app_bundle(&mount_point, &platform.user_applications_dir()?);
+    let _ = Command::new("hdiutil")
+        .args(["detach"])
+        .arg(&mount_point)
+        .status();
+    result
+}
+
+#[cfg(not(target_os = "macos"))]
+fn install_macos_dmg(_package: &Path, _platform: &dyn PlatformBackend) -> Result<(), InstallError> {
+    Err(InstallError::UnsupportedPlatform)
+}
+
+#[cfg(target_os = "macos")]
+fn copy_first_app_bundle(mount_point: &Path, destination: &Path) -> Result<(), InstallError> {
+    let bundle = fs::read_dir(mount_point)
+        .map_err(|error| InstallError::InstallerFailed(error.to_string()))?
+        .filter_map(Result::ok)
+        .map(|entry| entry.path())
+        .find(|path| path.extension().is_some_and(|extension| extension == "app"))
+        .ok_or_else(|| InstallError::InstallerFailed("DMG 中没有找到应用".to_owned()))?;
+    fs::create_dir_all(destination)
+        .map_err(|error| InstallError::InstallerFailed(error.to_string()))?;
+    let target = destination.join(bundle.file_name().unwrap_or_default());
+    if target.exists() {
+        fs::remove_dir_all(&target)
+            .map_err(|error| InstallError::InstallerFailed(error.to_string()))?;
+    }
+    copy_dir_all(&bundle, &target)
+}
+
+#[cfg(target_os = "macos")]
+fn copy_dir_all(source: &Path, destination: &Path) -> Result<(), InstallError> {
+    fs::create_dir_all(destination)
+        .map_err(|error| InstallError::InstallerFailed(error.to_string()))?;
+    for entry in
+        fs::read_dir(source).map_err(|error| InstallError::InstallerFailed(error.to_string()))?
+    {
+        let entry = entry.map_err(|error| InstallError::InstallerFailed(error.to_string()))?;
+        let source_path = entry.path();
+        let destination_path = destination.join(entry.file_name());
+        if source_path.is_dir() {
+            copy_dir_all(&source_path, &destination_path)?;
+        } else {
+            fs::copy(&source_path, &destination_path)
+                .map_err(|error| InstallError::InstallerFailed(error.to_string()))?;
+        }
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{expand_macos_paths, expand_windows_paths, DesktopAppAdapter};
+    use crate::domain::{AppId, AppRelease, InstallerKind};
+
+    fn release() -> AppRelease {
+        AppRelease {
+            version: "1.0.0".to_owned(),
+            url: "https://example.test/package".to_owned(),
+            size_bytes: 1,
+            sha256: "0".repeat(64),
+            installer_kind: InstallerKind::WindowsExe,
+            windows_executable: Some("Codex/Codex.exe".to_owned()),
+            macos_bundle: Some("Codex.app".to_owned()),
+        }
+    }
+
+    #[test]
+    fn expands_relative_windows_path_under_known_roots() {
+        let paths = expand_windows_paths("Codex/Codex.exe");
+        assert!(!paths.is_empty());
+        assert!(paths.iter().any(|path| path.ends_with("Codex/Codex.exe")));
+    }
+
+    #[test]
+    fn expands_macos_bundle_under_application_directories() {
+        let paths = expand_macos_paths("Codex.app");
+        assert!(paths
+            .iter()
+            .any(|path| path.ends_with("Applications/Codex.app")));
+    }
+
+    #[test]
+    fn adapters_keep_app_identity_separate() {
+        assert_eq!(DesktopAppAdapter::new(AppId::Codex).app_id, AppId::Codex);
+        assert_eq!(
+            DesktopAppAdapter::new(AppId::CcSwitch).app_id,
+            AppId::CcSwitch
+        );
+        assert_eq!(release().version, "1.0.0");
+    }
+}
