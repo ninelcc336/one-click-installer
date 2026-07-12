@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::fmt;
+use std::{fmt, path::PathBuf};
 use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -108,8 +108,27 @@ pub struct AppRelease {
     pub installer_kind: InstallerKind,
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize)]
+pub struct InstalledApp {
+    pub app_id: AppId,
+    pub version: String,
+    pub executable: PathBuf,
+}
+
 #[derive(Debug, Clone, Error, Eq, PartialEq)]
 pub enum InstallError {
+    #[error("文件系统操作失败: {0}")]
+    FileSystem(String),
+    #[error("不支持当前操作系统")]
+    UnsupportedPlatform,
+    #[error("磁盘空间不足，需要 {required} 字节，可用 {available} 字节")]
+    InsufficientDiskSpace { required: u64, available: u64 },
+    #[error("没有足够的安装权限: {0}")]
+    PermissionDenied(String),
+    #[error("启动应用失败: {0}")]
+    LaunchFailed(String),
+    #[error("创建应用入口失败: {0}")]
+    EntryCreationFailed(String),
     #[error("版本清单 JSON 无效: {0}")]
     InvalidJson(String),
     #[error("版本清单无效: {0}")]
