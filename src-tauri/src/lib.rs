@@ -1,4 +1,5 @@
 pub mod adapters;
+pub mod commands;
 pub mod coordinator;
 pub mod domain;
 pub mod download;
@@ -7,7 +8,15 @@ pub mod platform;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let manifest = manifest::Manifest::from_json(include_str!("../../assets/manifest.json"))
+        .expect("内置版本清单必须是有效 JSON");
     tauri::Builder::default()
+        .manage(commands::InstallerState { manifest })
+        .invoke_handler(tauri::generate_handler![
+            commands::get_preflight,
+            commands::start_install,
+            commands::open_log_folder
+        ])
         .run(tauri::generate_context!())
         .expect("运行 Tauri 应用失败");
 }

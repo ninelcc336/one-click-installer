@@ -72,3 +72,148 @@ h1 {
   cursor: not-allowed;
   font-weight: 700;
 }
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.text-button {
+  padding: 12px 4px;
+  border: 0;
+  color: #657089;
+  background: transparent;
+  cursor: pointer;
+}
+
+.text-button:hover {
+  color: #315efb;
+}
+
+.panel,
+.success-card,
+.notice {
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 16px 38px rgb(34 48 82 / 8%);
+}
+
+.panel {
+  margin-bottom: 24px;
+  padding: 8px 22px;
+}
+
+.check-row,
+.progress-heading {
+  display: flex;
+  align-items: center;
+  min-height: 58px;
+  gap: 12px;
+}
+
+.check-row + .check-row {
+  border-top: 1px solid #edf0f6;
+}
+
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #8d99ad;
+}
+
+.status-dot.ok {
+  background: #2ab673;
+}
+
+.status-dot.warn {
+  background: #e3a11a;
+}
+
+.check-name {
+  min-width: 94px;
+  font-weight: 700;
+}
+
+.check-message {
+  color: #657089;
+  font-size: 14px;
+}
+
+.notice {
+  margin: 0 0 24px;
+  padding: 15px 18px;
+  line-height: 1.6;
+}
+
+.notice.warning {
+  color: #7a5700;
+  background: #fff8df;
+}
+
+.notice.error {
+  color: #8c2e36;
+  background: #fff0f1;
+}
+
+.progress-list {
+  padding: 10px 22px 18px;
+}
+
+.progress-row + .progress-row {
+  border-top: 1px solid #edf0f6;
+}
+
+.progress-heading {
+  justify-content: space-between;
+  min-height: 50px;
+  font-weight: 700;
+}
+
+.progress-heading span:last-child {
+  color: #657089;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.progress-track {
+  height: 7px;
+  margin-bottom: 18px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: #e8ecf5;
+}
+
+.progress-value {
+  height: 100%;
+  border-radius: inherit;
+  background: #315efb;
+  transition: width 180ms ease;
+}
+
+.success-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding: 18px 20px;
+}
+
+.success-card p {
+  margin: 0;
+  color: #657089;
+  line-height: 1.6;
+}
+
+.success-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  color: #ffffff;
+  background: #2ab673;
+  font-weight: 800;
+}
