@@ -1,4 +1,5 @@
 pub mod adapters;
+pub mod coordinator;
 pub mod domain;
 pub mod download;
 pub mod manifest;

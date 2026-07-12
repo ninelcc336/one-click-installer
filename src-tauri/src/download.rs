@@ -13,6 +13,16 @@ pub trait ProgressSink: Send + Sync {
     fn on_progress(&self, app_id: AppId, downloaded: u64, total: u64);
 }
 
+pub trait Downloader: Send + Sync {
+    fn download(
+        &self,
+        app_id: AppId,
+        release: &AppRelease,
+        destination: &Path,
+        sink: &dyn ProgressSink,
+    ) -> Result<PathBuf, InstallError>;
+}
+
 pub struct DownloadManager {
     client: Client,
     max_retries: u8,
@@ -144,6 +154,18 @@ impl DownloadManager {
         fs::rename(partial, destination)
             .map_err(|error| InstallError::DownloadFailed(error.to_string()))?;
         Ok(destination.to_path_buf())
+    }
+}
+
+impl Downloader for DownloadManager {
+    fn download(
+        &self,
+        app_id: AppId,
+        release: &AppRelease,
+        destination: &Path,
+        sink: &dyn ProgressSink,
+    ) -> Result<PathBuf, InstallError> {
+        self.fetch(app_id, release, destination, sink)
     }
 }
 
