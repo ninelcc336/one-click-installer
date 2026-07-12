@@ -15,7 +15,7 @@
         "version": "2026-07-09",
         "url": "https://persistent.oaistatic.com/sidekick/public/ChatGPT.dmg",
         "size_bytes": 78575566,
-        "sha256": "49b33cad2ec659b76352384f7ebd332a7ec7029663365a9f720f4a251d3b8d",
+        "sha256": "49b33cadd2ec659b76352384f7ebd332a7ec7029663365a9f720f4a251d3b8d1",
         "installer_kind": "macos-dmg",
         "macos_bundle": "ChatGPT.app"
       },
@@ -23,7 +23,7 @@
         "version": "2026-07-09",
         "url": "https://persistent.oaistatic.com/sidekick/public/ChatGPT.dmg",
         "size_bytes": 78575566,
-        "sha256": "49b33cad2ec659b76352384f7ebd332a7ec7029663365a9f720f4a251d3b8d",
+        "sha256": "49b33cadd2ec659b76352384f7ebd332a7ec7029663365a9f720f4a251d3b8d1",
         "installer_kind": "macos-dmg",
         "macos_bundle": "ChatGPT.app"
       }
