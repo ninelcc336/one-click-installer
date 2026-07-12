@@ -1,5 +1,7 @@
 pub mod domain;
+pub mod download;
 pub mod manifest;
+pub mod platform;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

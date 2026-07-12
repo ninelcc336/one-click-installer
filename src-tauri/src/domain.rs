@@ -117,6 +117,14 @@ pub struct InstalledApp {
 
 #[derive(Debug, Clone, Error, Eq, PartialEq)]
 pub enum InstallError {
+    #[error("网络请求失败: {0}")]
+    Network(String),
+    #[error("安装包下载失败: {0}")]
+    DownloadFailed(String),
+    #[error("安装包大小不匹配，需要 {expected} 字节，实际 {actual} 字节")]
+    SizeMismatch { expected: u64, actual: u64 },
+    #[error("安装包 SHA-256 校验失败")]
+    ChecksumMismatch,
     #[error("文件系统操作失败: {0}")]
     FileSystem(String),
     #[error("不支持当前操作系统")]
