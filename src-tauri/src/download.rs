@@ -199,6 +199,8 @@ mod tests {
             size_bytes: body.len() as u64,
             sha256,
             installer_kind: InstallerKind::WindowsExe,
+            windows_executable: None,
+            macos_bundle: None,
         }
     }
 
