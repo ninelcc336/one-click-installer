@@ -73,9 +73,9 @@ pub fn get_preflight(state: State<'_, InstallerState>) -> Result<PreflightResult
                         available: true,
                         installed,
                         message: if installed {
-                            "已检测到，可以保留现有版本".to_owned()
+                            "已安装，可以保留现有版本".to_owned()
                         } else {
-                            "可以安装".to_owned()
+                            "未安装，可以安装".to_owned()
                         },
                     }
                 }

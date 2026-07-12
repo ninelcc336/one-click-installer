@@ -200,15 +200,13 @@ fn detect_windows_store(
         .windows_store_package_name
         .as_deref()
         .ok_or_else(|| InstallError::VerificationFailed(format!("{} 缺少 Store 包名", app_id)))?;
-    let script = "$package=Get-AppxPackage -Name $args[0] | Select-Object -First 1; if ($package) { Write-Output $package.PackageFamilyName }";
+    let package_literal = package_name.replace('\'', "''");
+    let script = format!(
+        "$package=Get-AppxPackage -Name '{}' | Select-Object -First 1; if ($package) {{ Write-Output $package.PackageFamilyName }}",
+        package_literal
+    );
     let output = Command::new("powershell.exe")
-        .args([
-            "-NoProfile",
-            "-NonInteractive",
-            "-Command",
-            script,
-            package_name,
-        ])
+        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
         .output()
         .map_err(|error| InstallError::VerificationFailed(error.to_string()))?;
     if !output.status.success() {

@@ -22,6 +22,7 @@ describe("安装向导页面", () => {
       },
       selectedApps: [],
       installDir: "C:/Users/test/AppData/Local/Programs",
+      preflightLoading: false,
       events: [],
       error: null,
     };
@@ -34,7 +35,7 @@ describe("安装向导页面", () => {
 
   it("进度页显示两个应用", () => {
     const root = document.createElement("main");
-    render({ screen: "progress", preflight: null, selectedApps: ["codex", "cc-switch"], installDir: "", events: [], error: null }, root);
+    render({ screen: "progress", preflight: null, preflightLoading: false, selectedApps: ["codex", "cc-switch"], installDir: "", events: [], error: null }, root);
 
     expect(root.textContent).toContain("Codex");
     expect(root.textContent).toContain("CC Switch");

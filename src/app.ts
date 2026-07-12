@@ -7,7 +7,7 @@ export function renderReadyScreen(root: HTMLElement): void {
 }
 
 export function mountInstaller(root: HTMLElement): void {
-  let state: UiState = { screen: "welcome", preflight: null, selectedApps: [], installDir: "", events: [], error: null };
+  let state: UiState = { screen: "welcome", preflight: null, preflightLoading: true, selectedApps: [], installDir: "", events: [], error: null };
   let stopListening: (() => void) | undefined;
 
   const update = (next: Partial<UiState>) => {
@@ -36,26 +36,34 @@ export function mountInstaller(root: HTMLElement): void {
     }
   };
 
+  const loadPreflight = async () => {
+    update({ preflightLoading: true, error: null });
+    try {
+      const preflight = await getPreflight();
+      update({
+        preflight,
+        preflightLoading: false,
+        installDir: preflight.install_dir,
+        selectedApps: preflight.apps.filter((app) => app.available).map((app) => app.app_id),
+      });
+    } catch (error) {
+      update({ preflightLoading: false, error: readableError(error) });
+    }
+  };
+
   root.addEventListener("click", async (event) => {
     const target = event.target;
     if (!(target instanceof HTMLElement)) return;
     const action = target.dataset.action;
     if (action === "start") {
-      update({ screen: "preflight", error: null });
-      try {
-        const preflight = await getPreflight();
-        update({
-          preflight,
-          installDir: preflight.install_dir,
-          selectedApps: preflight.apps.filter((app) => app.available).map((app) => app.app_id),
-        });
-      } catch (error) {
-        update({ screen: "failure", error: readableError(error) });
+      if (!state.preflight) {
+        await loadPreflight();
       }
+      update({ screen: "preflight" });
     } else if (action === "install" || action === "retry") {
       await beginInstall();
     } else if (action === "back") {
-      update({ screen: "welcome", preflight: null, selectedApps: [], installDir: "" });
+      update({ screen: "welcome", preflight: null, preflightLoading: false, selectedApps: [], installDir: "" });
     } else if (action === "choose-dir") {
       try {
         const installDir = await chooseInstallDir();
@@ -92,10 +100,16 @@ export function mountInstaller(root: HTMLElement): void {
     update({ selectedApps });
   });
 
+  void loadPreflight();
   render(state, root);
 }
 
 function readableError(error: unknown): string {
   if (error instanceof Error && error.message) return error.message;
+  if (typeof error === "string" && error) return error;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    if (typeof message === "string" && message) return message;
+  }
   return "安装器暂时无法继续，请稍后重试。";
 }

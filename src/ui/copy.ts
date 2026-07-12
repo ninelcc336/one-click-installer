@@ -3,6 +3,8 @@ export const copy = {
   title: "Codex 与 CC Switch",
   subtitle: "自动检测电脑环境，帮助你完成两个应用的安装。",
   start: "开始安装",
+  detecting: "正在检测电脑…",
+  notInstalled: "未安装",
   exit: "退出",
   checkTitle: "先检查一下电脑",
   checkSubtitle: "我们会检查系统、磁盘空间和安装权限。",

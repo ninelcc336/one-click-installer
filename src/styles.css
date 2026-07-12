@@ -121,6 +121,56 @@ h1 {
   padding: 8px 22px;
 }
 
+.compact-panel {
+  padding: 6px 18px;
+}
+
+.status-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.summary-item,
+.detecting-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.summary-item {
+  min-height: 48px;
+}
+
+.summary-item strong {
+  margin-left: auto;
+  color: #657089;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.detecting-card {
+  margin-bottom: 24px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  color: #657089;
+  background: #ffffff;
+  box-shadow: 0 16px 38px rgb(34 48 82 / 8%);
+}
+
+.loading-dot {
+  width: 10px;
+  height: 10px;
+  border: 2px solid #b9c6e5;
+  border-top-color: #315efb;
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .check-row,
 .progress-heading {
   display: flex;

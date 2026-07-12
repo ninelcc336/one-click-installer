@@ -29,6 +29,7 @@ export interface InstallEvent {
 export interface UiState {
   screen: Screen;
   preflight: PreflightResult | null;
+  preflightLoading: boolean;
   selectedApps: AppId[];
   installDir: string;
   events: InstallEvent[];

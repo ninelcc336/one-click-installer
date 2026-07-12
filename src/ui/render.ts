@@ -8,7 +8,7 @@ export function render(state: UiState, root: HTMLElement): void {
 function pageFor(state: UiState): string {
   switch (state.screen) {
     case "welcome":
-      return welcomePage();
+      return welcomePage(state);
     case "preflight":
       return preflightPage(state);
     case "progress":
@@ -32,9 +32,15 @@ function frame(content: string, title: string, subtitle: string): string {
   `;
 }
 
-function welcomePage(): string {
+function welcomePage(state: UiState): string {
+  const detection = state.preflightLoading
+    ? `<div class="detecting-card"><span class="loading-dot" aria-hidden="true"></span>${copy.detecting}</div>`
+    : state.preflight
+      ? `<div class="panel compact-panel"><div class="status-summary">${state.preflight.apps.map((app) => `<div class="summary-item"><span class="status-dot ${app.installed ? "ok" : "neutral"}" aria-hidden="true"></span><span>${appLabel(app.app_id)}</span><strong>${app.installed ? "已安装" : copy.notInstalled}</strong></div>`).join("")}</div></div>`
+      : `<p class="notice error">${state.error ?? "暂时无法检测电脑状态"}</p>`;
+  const disabled = state.preflightLoading || !state.preflight;
   return frame(
-    `<div class="actions"><button class="primary-button" data-action="start" type="button">${copy.start}</button><button class="text-button" data-action="exit" type="button">${copy.exit}</button></div>`,
+    `${detection}<div class="actions"><button class="primary-button" data-action="start" type="button" ${disabled ? "disabled" : ""}>${copy.start}</button><button class="text-button" data-action="exit" type="button">${copy.exit}</button></div>`,
     copy.title,
     copy.subtitle,
   );
