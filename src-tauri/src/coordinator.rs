@@ -1,6 +1,6 @@
 use crate::{
     adapters::AppAdapter,
-    domain::{AppId, AppRelease, InstallError, InstalledApp, PlatformTarget},
+    domain::{AppId, AppRelease, InstallError, InstalledApp, InstallerKind, PlatformTarget},
     download::{Downloader, ProgressSink},
     manifest::Manifest,
     platform::PlatformBackend,
@@ -153,31 +153,35 @@ impl InstallCoordinator {
                 continue;
             }
 
-            self.emit_and_save(
-                sink,
-                event(item.app_id, InstallPhase::Downloading, "download.started"),
-                &InstallCheckpoint {
-                    current_app: Some(item.app_id),
-                    phase: InstallPhase::Downloading,
-                    completed: summary.skipped.clone(),
-                },
-            )?;
-            let progress = CoordinatorProgress { sink };
-            let package = match self.downloader.download(
-                item.app_id,
-                &item.release,
-                &item.package_path,
-                &progress,
-            ) {
-                Ok(package) => package,
-                Err(error) => {
-                    self.save_checkpoint(&InstallCheckpoint {
+            let package = if item.release.installer_kind == InstallerKind::WindowsStore {
+                item.package_path.clone()
+            } else {
+                self.emit_and_save(
+                    sink,
+                    event(item.app_id, InstallPhase::Downloading, "download.started"),
+                    &InstallCheckpoint {
                         current_app: Some(item.app_id),
-                        phase: InstallPhase::Failed,
+                        phase: InstallPhase::Downloading,
                         completed: summary.skipped.clone(),
-                    })?;
-                    sink.emit(event(item.app_id, InstallPhase::Failed, "download.failed"));
-                    return Err(error);
+                    },
+                )?;
+                let progress = CoordinatorProgress { sink };
+                match self.downloader.download(
+                    item.app_id,
+                    &item.release,
+                    &item.package_path,
+                    &progress,
+                ) {
+                    Ok(package) => package,
+                    Err(error) => {
+                        self.save_checkpoint(&InstallCheckpoint {
+                            current_app: Some(item.app_id),
+                            phase: InstallPhase::Failed,
+                            completed: summary.skipped.clone(),
+                        })?;
+                        sink.emit(event(item.app_id, InstallPhase::Failed, "download.failed"));
+                        return Err(error);
+                    }
                 }
             };
 

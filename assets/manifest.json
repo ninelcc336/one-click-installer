@@ -1,4 +1,58 @@
 {
   "schema_version": 1,
-  "apps": {}
+  "apps": {
+    "codex": {
+      "windows-x64": {
+        "version": "store-current",
+        "url": "https://apps.microsoft.com/detail/9PLM9XGG6VKS",
+        "size_bytes": 0,
+        "sha256": "",
+        "installer_kind": "windows-store",
+        "windows_store_package_name": "OpenAI.Codex",
+        "store_product_id": "9PLM9XGG6VKS"
+      },
+      "macos-x64": {
+        "version": "2026-07-09",
+        "url": "https://persistent.oaistatic.com/sidekick/public/ChatGPT.dmg",
+        "size_bytes": 78575566,
+        "sha256": "49b33cad2ec659b76352384f7ebd332a7ec7029663365a9f720f4a251d3b8d",
+        "installer_kind": "macos-dmg",
+        "macos_bundle": "ChatGPT.app"
+      },
+      "macos-arm64": {
+        "version": "2026-07-09",
+        "url": "https://persistent.oaistatic.com/sidekick/public/ChatGPT.dmg",
+        "size_bytes": 78575566,
+        "sha256": "49b33cad2ec659b76352384f7ebd332a7ec7029663365a9f720f4a251d3b8d",
+        "installer_kind": "macos-dmg",
+        "macos_bundle": "ChatGPT.app"
+      }
+    },
+    "cc-switch": {
+      "windows-x64": {
+        "version": "3.16.5",
+        "url": "https://github.com/farion1231/cc-switch/releases/download/v3.16.5/CC-Switch-v3.16.5-Windows.msi",
+        "size_bytes": 12386304,
+        "sha256": "3a29982008bbf0419999df59ad2bdbf545c3b2bb29d87f2594f260ecacc22346",
+        "installer_kind": "windows-msi",
+        "windows_executable": "Programs/CC Switch/CC Switch.exe"
+      },
+      "macos-x64": {
+        "version": "3.16.5",
+        "url": "https://github.com/farion1231/cc-switch/releases/download/v3.16.5/CC-Switch-v3.16.5-macOS.dmg",
+        "size_bytes": 25842794,
+        "sha256": "1fc8b187bc7d1089e3ca3e9eca3a60ace5eaacb1ad9983ccf8e8fd11ec87fe3d",
+        "installer_kind": "macos-dmg",
+        "macos_bundle": "CC Switch.app"
+      },
+      "macos-arm64": {
+        "version": "3.16.5",
+        "url": "https://github.com/farion1231/cc-switch/releases/download/v3.16.5/CC-Switch-v3.16.5-macOS.dmg",
+        "size_bytes": 25842794,
+        "sha256": "1fc8b187bc7d1089e3ca3e9eca3a60ace5eaacb1ad9983ccf8e8fd11ec87fe3d",
+        "installer_kind": "macos-dmg",
+        "macos_bundle": "CC Switch.app"
+      }
+    }
+  }
 }

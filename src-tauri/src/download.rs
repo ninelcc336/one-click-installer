@@ -222,6 +222,8 @@ mod tests {
             sha256,
             installer_kind: InstallerKind::WindowsExe,
             windows_executable: None,
+            windows_store_package_name: None,
+            store_product_id: None,
             macos_bundle: None,
         }
     }

@@ -70,10 +70,19 @@ impl PlatformBackend for WindowsPlatform {
     }
 
     fn launch(&self, executable: &Path) -> Result<(), InstallError> {
-        Command::new(executable)
-            .spawn()
-            .map(|_| ())
-            .map_err(|error| InstallError::LaunchFailed(error.to_string()))
+        let executable_string = executable.to_string_lossy();
+        if executable_string.starts_with("shell:AppsFolder\\") {
+            Command::new("explorer.exe")
+                .arg(executable_string.as_ref())
+                .spawn()
+                .map(|_| ())
+                .map_err(|error| InstallError::LaunchFailed(error.to_string()))
+        } else {
+            Command::new(executable)
+                .spawn()
+                .map(|_| ())
+                .map_err(|error| InstallError::LaunchFailed(error.to_string()))
+        }
     }
 
     fn user_applications_dir(&self) -> Result<PathBuf, InstallError> {

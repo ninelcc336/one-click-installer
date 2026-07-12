@@ -95,6 +95,7 @@ impl fmt::Display for Arch {
 pub enum InstallerKind {
     WindowsExe,
     WindowsMsi,
+    WindowsStore,
     MacosDmg,
     MacosPkg,
 }
@@ -108,6 +109,10 @@ pub struct AppRelease {
     pub installer_kind: InstallerKind,
     #[serde(default)]
     pub windows_executable: Option<String>,
+    #[serde(default)]
+    pub windows_store_package_name: Option<String>,
+    #[serde(default)]
+    pub store_product_id: Option<String>,
     #[serde(default)]
     pub macos_bundle: Option<String>,
 }

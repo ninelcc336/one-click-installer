@@ -1,4 +1,4 @@
-use crate::domain::{AppId, AppRelease, InstallError, PlatformTarget};
+use crate::domain::{AppId, AppRelease, InstallError, InstallerKind, PlatformTarget};
 use serde::Deserialize;
 use std::collections::HashMap;
 
@@ -79,19 +79,32 @@ fn validate_release(release: &AppRelease) -> Result<(), InstallError> {
             release.url
         )));
     }
-    if release.size_bytes == 0 {
+    let is_store = release.installer_kind == InstallerKind::WindowsStore;
+    if !is_store && release.size_bytes == 0 {
         return Err(InstallError::InvalidManifest(
             "size_bytes 必须大于 0".to_owned(),
         ));
     }
-    if release.sha256.len() != 64
-        || !release
-            .sha256
-            .chars()
-            .all(|character| character.is_ascii_hexdigit())
+    if !is_store
+        && (release.sha256.len() != 64
+            || !release
+                .sha256
+                .chars()
+                .all(|character| character.is_ascii_hexdigit()))
     {
         return Err(InstallError::InvalidManifest(
             "sha256 必须是 64 位十六进制字符串".to_owned(),
+        ));
+    }
+    if is_store
+        && release
+            .store_product_id
+            .as_deref()
+            .unwrap_or_default()
+            .is_empty()
+    {
+        return Err(InstallError::InvalidManifest(
+            "Microsoft Store 安装包必须提供 store_product_id".to_owned(),
         ));
     }
     Ok(())
@@ -100,7 +113,7 @@ fn validate_release(release: &AppRelease) -> Result<(), InstallError> {
 #[cfg(test)]
 mod tests {
     use super::Manifest;
-    use crate::domain::{AppId, Arch, InstallError, Os, PlatformTarget};
+    use crate::domain::{AppId, Arch, InstallError, InstallerKind, Os, PlatformTarget};
 
     const VALID_RELEASE: &str = r#"
     {
@@ -166,5 +179,41 @@ mod tests {
             manifest.select(AppId::Codex, target),
             Err(InstallError::ReleaseNotFound { .. })
         ));
+    }
+
+    #[test]
+    fn accepts_microsoft_store_release_without_file_hash() {
+        let input = r#"
+        {
+          "schema_version": 1,
+          "apps": {
+            "codex": {
+              "windows-x64": {
+                "version": "store-current",
+                "url": "https://apps.microsoft.com/detail/9PLM9XGG6VKS",
+                "size_bytes": 0,
+                "sha256": "",
+                "installer_kind": "windows-store",
+                "windows_store_package_name": "OpenAI.Codex",
+                "store_product_id": "9PLM9XGG6VKS"
+              }
+            }
+          }
+        }
+        "#;
+
+        let release = Manifest::from_json(input)
+            .unwrap()
+            .select(
+                AppId::Codex,
+                PlatformTarget {
+                    os: Os::Windows,
+                    arch: Arch::X64,
+                },
+            )
+            .unwrap();
+
+        assert_eq!(release.installer_kind, InstallerKind::WindowsStore);
+        assert_eq!(release.store_product_id.as_deref(), Some("9PLM9XGG6VKS"));
     }
 }

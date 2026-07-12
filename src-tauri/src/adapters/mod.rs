@@ -76,6 +76,9 @@ impl AppAdapter for DesktopAppAdapter {
         platform: &dyn PlatformBackend,
     ) -> Result<Option<InstalledApp>, InstallError> {
         let target = platform.target();
+        if target.os == Os::Windows && release.installer_kind == InstallerKind::WindowsStore {
+            return detect_windows_store(self.app_id, release);
+        }
         Ok(self
             .candidate_paths(release, target)
             .into_iter()
@@ -99,6 +102,24 @@ impl AppAdapter for DesktopAppAdapter {
                 Path::new("msiexec.exe"),
                 &["/i", package.to_string_lossy().as_ref()],
             ),
+            (Os::Windows, InstallerKind::WindowsStore) => {
+                let product_id = release.store_product_id.as_deref().ok_or_else(|| {
+                    InstallError::InstallerFailed("缺少 Microsoft Store 产品 ID".to_owned())
+                })?;
+                run_command(
+                    Path::new("winget.exe"),
+                    &[
+                        "install",
+                        "--id",
+                        product_id,
+                        "--exact",
+                        "--source",
+                        "msstore",
+                        "--accept-source-agreements",
+                        "--accept-package-agreements",
+                    ],
+                )
+            }
             (Os::Macos, InstallerKind::MacosPkg) => run_command(
                 Path::new("/usr/sbin/installer"),
                 &[
@@ -149,6 +170,48 @@ fn run_command(program: &Path, args: &[&str]) -> Result<(), InstallError> {
             status.code()
         )))
     }
+}
+
+#[cfg(target_os = "windows")]
+fn detect_windows_store(
+    app_id: AppId,
+    release: &AppRelease,
+) -> Result<Option<InstalledApp>, InstallError> {
+    let package_name = release
+        .windows_store_package_name
+        .as_deref()
+        .ok_or_else(|| InstallError::VerificationFailed(format!("{} 缺少 Store 包名", app_id)))?;
+    let script = "$package=Get-AppxPackage -Name $args[0] | Select-Object -First 1; if ($package) { Write-Output $package.PackageFamilyName }";
+    let output = Command::new("powershell.exe")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            script,
+            package_name,
+        ])
+        .output()
+        .map_err(|error| InstallError::VerificationFailed(error.to_string()))?;
+    if !output.status.success() {
+        return Ok(None);
+    }
+    let family_name = String::from_utf8_lossy(&output.stdout).trim().to_owned();
+    if family_name.is_empty() {
+        return Ok(None);
+    }
+    Ok(Some(InstalledApp {
+        app_id,
+        version: "store".to_owned(),
+        executable: PathBuf::from(format!("shell:AppsFolder\\{family_name}!App")),
+    }))
+}
+
+#[cfg(not(target_os = "windows"))]
+fn detect_windows_store(
+    _app_id: AppId,
+    _release: &AppRelease,
+) -> Result<Option<InstalledApp>, InstallError> {
+    Ok(None)
 }
 
 fn expand_windows_paths(relative_or_absolute: &str) -> Vec<PathBuf> {
@@ -262,6 +325,8 @@ mod tests {
             sha256: "0".repeat(64),
             installer_kind: InstallerKind::WindowsExe,
             windows_executable: Some("Codex/Codex.exe".to_owned()),
+            windows_store_package_name: None,
+            store_product_id: None,
             macos_bundle: Some("Codex.app".to_owned()),
         }
     }
