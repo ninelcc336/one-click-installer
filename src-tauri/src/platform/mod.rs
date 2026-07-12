@@ -52,7 +52,7 @@ pub fn target_from_cfg() -> Result<PlatformTarget, InstallError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{PlatformBackend, target_from_cfg};
+    use super::{target_from_cfg, PlatformBackend};
     use crate::domain::{AppId, InstallError, PlatformTarget};
     use std::path::{Path, PathBuf};
 

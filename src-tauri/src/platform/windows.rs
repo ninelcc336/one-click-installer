@@ -1,7 +1,11 @@
 use super::{target_from_cfg, PlatformBackend};
 use crate::domain::{AppId, InstallError, PlatformTarget};
 use fs2::available_space;
-use std::{env, fs, path::{Path, PathBuf}, process::Command};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+    process::Command,
+};
 
 pub struct WindowsPlatform;
 
