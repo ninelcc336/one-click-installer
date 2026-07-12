@@ -1,6 +1,6 @@
 export type Screen = "welcome" | "preflight" | "progress" | "complete" | "failure";
 
-export type AppId = "Codex" | "CC Switch";
+export type AppId = "codex" | "cc-switch";
 
 export interface PreflightApp {
   app_id: AppId;
@@ -13,6 +13,8 @@ export interface PreflightResult {
   target: string;
   free_space_bytes: number;
   can_write: boolean;
+  install_dir: string;
+  install_path_note: string;
   apps: PreflightApp[];
 }
 
@@ -27,6 +29,8 @@ export interface InstallEvent {
 export interface UiState {
   screen: Screen;
   preflight: PreflightResult | null;
+  selectedApps: AppId[];
+  installDir: string;
   events: InstallEvent[];
   error: string | null;
 }

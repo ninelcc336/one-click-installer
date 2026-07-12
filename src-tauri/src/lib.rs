@@ -16,7 +16,8 @@ pub fn run() {
             commands::get_preflight,
             commands::start_install,
             commands::open_log_folder,
-            commands::launch_app
+            commands::launch_app,
+            commands::choose_install_dir
         ])
         .run(tauri::generate_context!())
         .expect("运行 Tauri 应用失败");

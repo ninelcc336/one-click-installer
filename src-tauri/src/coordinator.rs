@@ -68,6 +68,7 @@ pub struct InstallSummary {
 pub struct InstallCoordinator {
     manifest: Manifest,
     platform: Box<dyn PlatformBackend>,
+    install_dir: PathBuf,
     adapters: Vec<Box<dyn AppAdapter>>,
     downloader: Box<dyn Downloader>,
     checkpoint_path: PathBuf,
@@ -77,6 +78,7 @@ impl InstallCoordinator {
     pub fn new(
         manifest: Manifest,
         platform: Box<dyn PlatformBackend>,
+        install_dir: PathBuf,
         adapters: Vec<Box<dyn AppAdapter>>,
         downloader: Box<dyn Downloader>,
         checkpoint_path: PathBuf,
@@ -84,16 +86,21 @@ impl InstallCoordinator {
         Self {
             manifest,
             platform,
+            install_dir,
             adapters,
             downloader,
             checkpoint_path,
         }
     }
 
-    pub fn plan(&self, cache_dir: &Path) -> Result<InstallPlan, InstallError> {
+    pub fn plan(
+        &self,
+        cache_dir: &Path,
+        selected_apps: &[AppId],
+    ) -> Result<InstallPlan, InstallError> {
         let target = self.platform.target();
         let mut items = Vec::new();
-        for app_id in [AppId::Codex, AppId::CcSwitch] {
+        for app_id in selected_apps.iter().copied() {
             let release = self.manifest.select(app_id, target)?;
             let package_path =
                 cache_dir.join(format!("{}-{}", app_id.as_manifest_key(), release.version));
@@ -132,7 +139,9 @@ impl InstallCoordinator {
                     InstallError::VerificationFailed(format!("缺少 {} 适配器", item.app_id))
                 })?;
 
-            if let Some(existing) = adapter.detect(&item.release, self.platform.as_ref())? {
+            if let Some(existing) =
+                adapter.detect(&item.release, self.platform.as_ref(), &self.install_dir)?
+            {
                 self.emit_and_save(
                     sink,
                     InstallEvent {
@@ -194,7 +203,12 @@ impl InstallCoordinator {
                     completed: summary.skipped.clone(),
                 },
             )?;
-            if let Err(error) = adapter.install(&item.release, &package, self.platform.as_ref()) {
+            if let Err(error) = adapter.install(
+                &item.release,
+                &package,
+                self.platform.as_ref(),
+                &self.install_dir,
+            ) {
                 self.save_checkpoint(&InstallCheckpoint {
                     current_app: Some(item.app_id),
                     phase: InstallPhase::Failed,
@@ -217,18 +231,19 @@ impl InstallCoordinator {
                     completed: summary.skipped.clone(),
                 },
             )?;
-            let installed = match adapter.verify(&item.release, self.platform.as_ref()) {
-                Ok(installed) => installed,
-                Err(error) => {
-                    self.save_checkpoint(&InstallCheckpoint {
-                        current_app: Some(item.app_id),
-                        phase: InstallPhase::Failed,
-                        completed: summary.skipped.clone(),
-                    })?;
-                    sink.emit(event(item.app_id, InstallPhase::Failed, "verify.failed"));
-                    return Err(error);
-                }
-            };
+            let installed =
+                match adapter.verify(&item.release, self.platform.as_ref(), &self.install_dir) {
+                    Ok(installed) => installed,
+                    Err(error) => {
+                        self.save_checkpoint(&InstallCheckpoint {
+                            current_app: Some(item.app_id),
+                            phase: InstallPhase::Failed,
+                            completed: summary.skipped.clone(),
+                        })?;
+                        sink.emit(event(item.app_id, InstallPhase::Failed, "verify.failed"));
+                        return Err(error);
+                    }
+                };
 
             self.emit_and_save(
                 sink,
@@ -371,7 +386,12 @@ mod tests {
         fn id(&self) -> AppId {
             self.app_id
         }
-        fn candidate_paths(&self, _release: &AppRelease, _target: PlatformTarget) -> Vec<PathBuf> {
+        fn candidate_paths(
+            &self,
+            _release: &AppRelease,
+            _target: PlatformTarget,
+            _install_dir: &Path,
+        ) -> Vec<PathBuf> {
             vec![self
                 .root
                 .join(format!("{}.exe", self.app_id.as_manifest_key()))]
@@ -380,9 +400,10 @@ mod tests {
             &self,
             release: &AppRelease,
             platform: &dyn PlatformBackend,
+            install_dir: &Path,
         ) -> Result<Option<InstalledApp>, InstallError> {
             Ok(self
-                .candidate_paths(release, platform.target())
+                .candidate_paths(release, platform.target(), install_dir)
                 .into_iter()
                 .find(|path| path.exists())
                 .map(|executable| InstalledApp {
@@ -396,6 +417,7 @@ mod tests {
             _release: &AppRelease,
             _package: &Path,
             _platform: &dyn PlatformBackend,
+            _install_dir: &Path,
         ) -> Result<(), InstallError> {
             fs::create_dir_all(&self.root).unwrap();
             fs::write(
@@ -410,8 +432,9 @@ mod tests {
             &self,
             release: &AppRelease,
             platform: &dyn PlatformBackend,
+            install_dir: &Path,
         ) -> Result<InstalledApp, InstallError> {
-            self.detect(release, platform)?
+            self.detect(release, platform, install_dir)?
                 .ok_or_else(|| InstallError::VerificationFailed("fake verify failed".to_owned()))
         }
         fn launch(
@@ -467,6 +490,7 @@ mod tests {
         let coordinator = InstallCoordinator::new(
             manifest(),
             Box::new(FakePlatform),
+            directory.path().join("install"),
             vec![
                 Box::new(FakeAdapter {
                     app_id: AppId::Codex,
@@ -481,7 +505,12 @@ mod tests {
             directory.path().join("checkpoint.json"),
         );
 
-        let plan = coordinator.plan(&directory.path().join("cache")).unwrap();
+        let plan = coordinator
+            .plan(
+                &directory.path().join("cache"),
+                &[AppId::Codex, AppId::CcSwitch],
+            )
+            .unwrap();
         let summary = coordinator.run(&plan, &recorder).unwrap();
 
         assert_eq!(summary.installed.len(), 2);

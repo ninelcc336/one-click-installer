@@ -27,6 +27,8 @@ pub struct PreflightResult {
     pub target: String,
     pub free_space_bytes: u64,
     pub can_write: bool,
+    pub install_dir: String,
+    pub install_path_note: String,
     pub apps: Vec<PreflightApp>,
 }
 
@@ -62,7 +64,7 @@ pub fn get_preflight(state: State<'_, InstallerState>) -> Result<PreflightResult
                         cc_switch::adapter()
                     };
                     let installed = adapter
-                        .detect(&release, platform.as_ref())
+                        .detect(&release, platform.as_ref(), &install_dir)
                         .ok()
                         .flatten()
                         .is_some();
@@ -91,12 +93,26 @@ pub fn get_preflight(state: State<'_, InstallerState>) -> Result<PreflightResult
         target: target.key(),
         free_space_bytes,
         can_write,
+        install_dir: install_dir.to_string_lossy().into_owned(),
+        install_path_note: if target.os == crate::domain::Os::Windows {
+            "Codex 的 Microsoft Store 版本由系统管理安装位置；CC Switch 使用官方安装器。".to_owned()
+        } else {
+            "可将应用安装到你选择的 macOS Applications 目录。".to_owned()
+        },
         apps,
     })
 }
 
 #[tauri::command]
-pub fn start_install(app: AppHandle, state: State<'_, InstallerState>) -> Result<(), String> {
+pub fn start_install(
+    app: AppHandle,
+    selected_apps: Vec<AppId>,
+    install_dir: String,
+    state: State<'_, InstallerState>,
+) -> Result<(), String> {
+    if selected_apps.is_empty() {
+        return Err("请至少选择一个应用".to_owned());
+    }
     let platform = platform::current().map_err(to_message)?;
     let base_dir = installer_data_dir()?;
     let cache_dir = base_dir.join("packages");
@@ -107,11 +123,14 @@ pub fn start_install(app: AppHandle, state: State<'_, InstallerState>) -> Result
     let coordinator = InstallCoordinator::new(
         state.manifest.clone(),
         platform,
+        PathBuf::from(install_dir),
         adapters,
         Box::new(downloader),
         checkpoint_path,
     );
-    let plan = coordinator.plan(&cache_dir).map_err(to_message)?;
+    let plan = coordinator
+        .plan(&cache_dir, &selected_apps)
+        .map_err(to_message)?;
     coordinator
         .run(&plan, &TauriEventSink { app })
         .map(|_| ())
@@ -134,19 +153,53 @@ pub fn open_log_folder() -> Result<String, String> {
 }
 
 #[tauri::command]
+pub fn choose_install_dir() -> Result<String, String> {
+    let output = if cfg!(target_os = "windows") {
+        Command::new("powershell.exe")
+            .args([
+                "-NoProfile",
+                "-NonInteractive",
+                "-Command",
+                "$dialog=New-Object -ComObject Shell.Application; $folder=$dialog.BrowseForFolder(0,'选择安装目录',0,0); if ($folder) { $folder.Self.Path }",
+            ])
+            .output()
+            .map_err(|error| error.to_string())?
+    } else if cfg!(target_os = "macos") {
+        Command::new("osascript")
+            .args([
+                "-e",
+                "POSIX path of (choose folder with prompt \"选择安装目录\")",
+            ])
+            .output()
+            .map_err(|error| error.to_string())?
+    } else {
+        return Err("不支持当前操作系统".to_owned());
+    };
+    if !output.status.success() {
+        return Err("用户取消选择安装目录".to_owned());
+    }
+    let path = String::from_utf8_lossy(&output.stdout).trim().to_owned();
+    if path.is_empty() {
+        return Err("用户取消选择安装目录".to_owned());
+    }
+    Ok(path)
+}
+
+#[tauri::command]
 pub fn launch_app(app_id: AppId, state: State<'_, InstallerState>) -> Result<(), String> {
     let platform = platform::current().map_err(to_message)?;
     let release = state
         .manifest
         .select(app_id, platform.target())
         .map_err(to_message)?;
+    let install_dir = platform.user_applications_dir().map_err(to_message)?;
     let adapter: Box<dyn crate::adapters::AppAdapter> = if app_id == AppId::Codex {
         Box::new(codex::adapter())
     } else {
         Box::new(cc_switch::adapter())
     };
     let installed = adapter
-        .detect(&release, platform.as_ref())
+        .detect(&release, platform.as_ref(), &install_dir)
         .map_err(to_message)?
         .ok_or_else(|| format!("没有找到已安装的 {}", app_id))?;
     adapter

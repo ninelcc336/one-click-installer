@@ -1,5 +1,5 @@
 import { copy } from "./copy";
-import type { InstallEvent, UiState } from "./types";
+import type { AppId, InstallEvent, UiState } from "./types";
 
 export function render(state: UiState, root: HTMLElement): void {
   root.innerHTML = pageFor(state);
@@ -14,7 +14,7 @@ function pageFor(state: UiState): string {
     case "progress":
       return progressPage(state);
     case "complete":
-      return completePage();
+      return completePage(state);
     case "failure":
       return failurePage(state);
   }
@@ -44,15 +44,17 @@ function preflightPage(state: UiState): string {
   const preflight = state.preflight;
   const apps = preflight?.apps ?? [];
   const unavailable = apps.some((app) => !app.available);
+  const selectedUnavailable = state.selectedApps.some((appId) => apps.some((app) => app.app_id === appId && !app.available));
   const permissionBlocked = preflight ? !preflight.can_write : true;
   const rows = apps
     .map(
       (app) => `
-        <div class="check-row">
-          <span class="status-dot ${app.available ? "ok" : "warn"}" aria-hidden="true"></span>
-          <span class="check-name">${app.app_id}</span>
+        <label class="check-row ${app.available ? "" : "muted"}">
+          <input class="app-checkbox" type="checkbox" data-app-id="${app.app_id}" ${state.selectedApps.includes(app.app_id) ? "checked" : ""} ${app.available ? "" : "disabled"} />
+          <span class="status-dot ${app.installed ? "ok" : app.available ? "neutral" : "warn"}" aria-hidden="true"></span>
+          <span class="check-name">${appLabel(app.app_id)}</span>
           <span class="check-message">${app.message}</span>
-        </div>
+        </label>
       `,
     )
     .join("");
@@ -61,10 +63,13 @@ function preflightPage(state: UiState): string {
     : permissionBlocked
       ? `<p class="notice warning">${copy.permission}</p>`
       : "";
-  const canContinue = !unavailable && !permissionBlocked;
+  const canContinue = !selectedUnavailable && !permissionBlocked && state.selectedApps.length > 0;
+  const selectionNotice = state.selectedApps.length === 0
+    ? `<p class="notice warning">请至少选择一个应用。</p>`
+    : "";
 
   return frame(
-    `<div class="panel"><div class="check-list">${rows}</div>${notice}</div><div class="actions"><button class="primary-button" data-action="install" type="button" ${canContinue ? "" : "disabled"}>${copy.start}</button><button class="text-button" data-action="back" type="button">${copy.back}</button></div>`,
+    `<div class="panel"><div class="check-list">${rows}</div>${notice}</div><div class="path-picker"><div><span class="path-label">安装位置</span><span class="path-value">${state.installDir || "未选择"}</span></div><button class="secondary-button" data-action="choose-dir" type="button">浏览</button></div><p class="path-note">${preflight?.install_path_note ?? ""}</p>${selectionNotice}<div class="actions"><button class="primary-button" data-action="install" type="button" ${canContinue ? "" : "disabled"}>${copy.start}</button><button class="text-button" data-action="back" type="button">${copy.back}</button></div>`,
     copy.checkTitle,
     preflight ? `系统：${preflight.target} · 可用空间：${formatBytes(preflight.free_space_bytes)}` : copy.checkSubtitle,
   );
@@ -72,18 +77,23 @@ function preflightPage(state: UiState): string {
 
 function progressPage(state: UiState): string {
   const latest = latestByApp(state.events);
-  const rows = ["Codex", "CC Switch"]
+  const rows = state.selectedApps
     .map((app) => {
       const event = latest.get(app);
-      const percent = event?.total ? Math.min(100, Math.round(((event.downloaded ?? 0) / event.total) * 100)) : 0;
-      return `<div class="progress-row"><div class="progress-heading"><span>${app}</span><span>${eventLabel(event)}</span></div><div class="progress-track"><div class="progress-value" style="width:${percent}%"></div></div></div>`;
+      const percent = event?.total ? Math.min(100, Math.round(((event.downloaded ?? 0) / event.total) * 100)) : event?.phase === "Completed" || event?.phase === "Skipped" ? 100 : 0;
+      return `<div class="progress-row"><div class="progress-heading"><span>${appLabel(app)}</span><span>${eventLabel(event)}</span></div><div class="progress-track"><div class="progress-value" style="width:${percent}%"></div></div></div>`;
     })
     .join("");
   return frame(`<div class="panel progress-list">${rows}</div><button class="text-button" data-action="cancel" type="button">${copy.exit}</button>`, copy.progressTitle, copy.progressSubtitle);
 }
 
-function completePage(): string {
-  return frame(`<div class="success-card"><span class="success-icon" aria-hidden="true">✓</span><p>首次使用时，请在应用内完成登录。</p></div><div class="actions"><button class="primary-button" data-action="launch-codex" type="button">${copy.openCodex}</button><button class="secondary-button" data-action="launch-cc-switch" type="button">${copy.openCcSwitch}</button><button class="text-button" data-action="finish" type="button">${copy.finish}</button></div>`, copy.completeTitle, copy.completeSubtitle);
+function completePage(state: UiState): string {
+  const launchButtons = state.selectedApps
+    .map((app) => app === "codex"
+      ? `<button class="primary-button" data-action="launch-codex" type="button">${copy.openCodex}</button>`
+      : `<button class="secondary-button" data-action="launch-cc-switch" type="button">${copy.openCcSwitch}</button>`)
+    .join("");
+  return frame(`<div class="success-card"><span class="success-icon" aria-hidden="true">✓</span><p>首次使用时，请在应用内完成登录。</p></div><div class="actions">${launchButtons}<button class="text-button" data-action="finish" type="button">${copy.finish}</button></div>`, copy.completeTitle, copy.completeSubtitle);
 }
 
 function failurePage(state: UiState): string {
@@ -110,4 +120,8 @@ function eventLabel(event: InstallEvent | undefined): string {
 function formatBytes(bytes: number): string {
   if (bytes > 1024 ** 3) return `${(bytes / 1024 ** 3).toFixed(1)} GB`;
   return `${Math.max(1, Math.round(bytes / 1024 ** 2))} MB`;
+}
+
+function appLabel(appId: AppId): string {
+  return appId === "codex" ? "Codex" : "CC Switch";
 }

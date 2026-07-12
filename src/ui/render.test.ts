@@ -13,11 +13,15 @@ describe("安装向导页面", () => {
         target: "windows-x64",
         free_space_bytes: 1024 * 1024 * 1024,
         can_write: true,
+        install_dir: "C:/Users/test/AppData/Local/Programs",
+        install_path_note: "Codex 的 Microsoft Store 版本由系统管理安装位置。",
         apps: [
-          { app_id: "Codex", available: false, installed: false, message: "等待核验安装包信息" },
-          { app_id: "CC Switch", available: false, installed: false, message: "等待核验安装包信息" },
+          { app_id: "codex", available: false, installed: false, message: "等待核验安装包信息" },
+          { app_id: "cc-switch", available: false, installed: false, message: "等待核验安装包信息" },
         ],
       },
+      selectedApps: [],
+      installDir: "C:/Users/test/AppData/Local/Programs",
       events: [],
       error: null,
     };
@@ -30,7 +34,7 @@ describe("安装向导页面", () => {
 
   it("进度页显示两个应用", () => {
     const root = document.createElement("main");
-    render({ screen: "progress", preflight: null, events: [], error: null }, root);
+    render({ screen: "progress", preflight: null, selectedApps: ["codex", "cc-switch"], installDir: "", events: [], error: null }, root);
 
     expect(root.textContent).toContain("Codex");
     expect(root.textContent).toContain("CC Switch");

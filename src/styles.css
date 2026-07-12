@@ -69,8 +69,14 @@ h1 {
   border-radius: 12px;
   color: #ffffff;
   background: #aeb8ca;
-  cursor: not-allowed;
+  cursor: pointer;
   font-weight: 700;
+}
+
+.primary-button:disabled,
+.secondary-button:disabled {
+  opacity: .52;
+  cursor: not-allowed;
 }
 
 .secondary-button {
@@ -142,6 +148,20 @@ h1 {
   background: #e3a11a;
 }
 
+.status-dot.neutral {
+  background: #8d99ad;
+}
+
+.check-row.muted {
+  opacity: .7;
+}
+
+.app-checkbox {
+  width: 16px;
+  height: 16px;
+  accent-color: #315efb;
+}
+
 .check-name {
   min-width: 94px;
   font-weight: 700;
@@ -150,6 +170,42 @@ h1 {
 .check-message {
   color: #657089;
   font-size: 14px;
+}
+
+.path-picker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+  padding: 16px 18px;
+  border: 1px solid #e3e8f2;
+  border-radius: 14px;
+  background: #ffffff;
+}
+
+.path-label {
+  display: block;
+  margin-bottom: 5px;
+  color: #657089;
+  font-size: 12px;
+}
+
+.path-value {
+  display: block;
+  max-width: 430px;
+  overflow: hidden;
+  color: #172033;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.path-note {
+  margin: 0 0 22px;
+  color: #657089;
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .notice {
