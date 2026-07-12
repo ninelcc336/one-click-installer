@@ -83,7 +83,7 @@ function progressPage(state: UiState): string {
 }
 
 function completePage(): string {
-  return frame(`<div class="success-card"><span class="success-icon" aria-hidden="true">✓</span><p>首次使用时，请在应用内完成登录。</p></div><div class="actions"><button class="primary-button" data-action="finish" type="button">${copy.finish}</button></div>`, copy.completeTitle, copy.completeSubtitle);
+  return frame(`<div class="success-card"><span class="success-icon" aria-hidden="true">✓</span><p>首次使用时，请在应用内完成登录。</p></div><div class="actions"><button class="primary-button" data-action="launch-codex" type="button">${copy.openCodex}</button><button class="secondary-button" data-action="launch-cc-switch" type="button">${copy.openCcSwitch}</button><button class="text-button" data-action="finish" type="button">${copy.finish}</button></div>`, copy.completeTitle, copy.completeSubtitle);
 }
 
 function failurePage(state: UiState): string {

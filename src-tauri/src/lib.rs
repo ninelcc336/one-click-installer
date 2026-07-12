@@ -15,7 +15,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::get_preflight,
             commands::start_install,
-            commands::open_log_folder
+            commands::open_log_folder,
+            commands::launch_app
         ])
         .run(tauri::generate_context!())
         .expect("运行 Tauri 应用失败");

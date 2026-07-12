@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import type { InstallEvent, PreflightResult } from "./ui/types";
 
 export function getPreflight(): Promise<PreflightResult> {
@@ -12,6 +13,14 @@ export function startInstall(): Promise<void> {
 
 export function openLogFolder(): Promise<string> {
   return invoke<string>("open_log_folder");
+}
+
+export function launchApp(appId: "codex" | "cc-switch"): Promise<void> {
+  return invoke("launch_app", { appId });
+}
+
+export function closeInstaller(): Promise<void> {
+  return getCurrentWindow().close();
 }
 
 export function listenToInstallEvents(handler: (event: InstallEvent) => void): Promise<UnlistenFn> {

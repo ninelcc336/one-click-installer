@@ -15,6 +15,8 @@ export const copy = {
   retry: "重试",
   back: "返回",
   finish: "完成",
+  openCodex: "打开 Codex",
+  openCcSwitch: "打开 CC Switch",
   exportLog: "打开诊断目录",
   unavailable: "等待核验安装包信息",
   installed: "已检测到，可以保留现有版本",

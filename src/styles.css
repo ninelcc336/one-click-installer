@@ -73,6 +73,17 @@ h1 {
   font-weight: 700;
 }
 
+.secondary-button {
+  min-width: 160px;
+  padding: 12px 18px;
+  border: 1px solid #d7deed;
+  border-radius: 12px;
+  color: #315efb;
+  background: #ffffff;
+  cursor: pointer;
+  font-weight: 700;
+}
+
 .actions {
   display: flex;
   align-items: center;

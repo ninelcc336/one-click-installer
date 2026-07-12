@@ -7,7 +7,7 @@ use crate::{
     platform,
 };
 use serde::Serialize;
-use std::{env, path::PathBuf};
+use std::{env, fs, path::PathBuf, process::Command};
 use tauri::{AppHandle, Emitter, State};
 
 pub struct InstallerState {
@@ -120,7 +120,38 @@ pub fn start_install(app: AppHandle, state: State<'_, InstallerState>) -> Result
 
 #[tauri::command]
 pub fn open_log_folder() -> Result<String, String> {
-    Ok(installer_data_dir()?.to_string_lossy().into_owned())
+    let path = installer_data_dir()?;
+    fs::create_dir_all(&path).map_err(|error| error.to_string())?;
+    let status = if cfg!(target_os = "windows") {
+        Command::new("explorer.exe").arg(&path).status()
+    } else if cfg!(target_os = "macos") {
+        Command::new("open").arg(&path).status()
+    } else {
+        return Err("不支持当前操作系统".to_owned());
+    };
+    status.map_err(|error| error.to_string())?;
+    Ok(path.to_string_lossy().into_owned())
+}
+
+#[tauri::command]
+pub fn launch_app(app_id: AppId, state: State<'_, InstallerState>) -> Result<(), String> {
+    let platform = platform::current().map_err(to_message)?;
+    let release = state
+        .manifest
+        .select(app_id, platform.target())
+        .map_err(to_message)?;
+    let adapter: Box<dyn crate::adapters::AppAdapter> = if app_id == AppId::Codex {
+        Box::new(codex::adapter())
+    } else {
+        Box::new(cc_switch::adapter())
+    };
+    let installed = adapter
+        .detect(&release, platform.as_ref())
+        .map_err(to_message)?
+        .ok_or_else(|| format!("没有找到已安装的 {}", app_id))?;
+    adapter
+        .launch(&installed, platform.as_ref())
+        .map_err(to_message)
 }
 
 fn installer_data_dir() -> Result<PathBuf, String> {

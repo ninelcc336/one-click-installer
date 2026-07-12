@@ -1,4 +1,4 @@
-import { getPreflight, listenToInstallEvents, openLogFolder, startInstall } from "./api";
+import { closeInstaller, getPreflight, launchApp, listenToInstallEvents, openLogFolder, startInstall } from "./api";
 import { render } from "./ui/render";
 import type { InstallEvent, UiState } from "./ui/types";
 
@@ -48,10 +48,20 @@ export function mountInstaller(root: HTMLElement): void {
       update({ screen: "welcome", preflight: null });
     } else if (action === "logs") {
       await openLogFolder();
+    } else if (action === "launch-codex" || action === "launch-cc-switch") {
+      try {
+        await launchApp(action === "launch-codex" ? "codex" : "cc-switch");
+      } catch (error) {
+        update({ screen: "failure", error: readableError(error) });
+      }
     } else if (action === "finish" || action === "exit" || action === "cancel") {
       stopListening?.();
       stopListening = undefined;
-      update({ screen: action === "finish" ? "welcome" : state.screen });
+      if (action === "exit" || action === "cancel") {
+        await closeInstaller();
+      } else {
+        update({ screen: "welcome" });
+      }
     }
   });
 
