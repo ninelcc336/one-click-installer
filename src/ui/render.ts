@@ -40,7 +40,7 @@ function welcomePage(state: UiState): string {
       : `<p class="notice error">${state.error ?? "暂时无法检测电脑状态"}</p>`;
   const disabled = state.preflightLoading || !state.preflight;
   return frame(
-    `${detection}<div class="actions"><button class="primary-button" data-action="start" type="button" ${disabled ? "disabled" : ""}>${copy.start}</button><button class="text-button" data-action="exit" type="button">${copy.exit}</button></div>`,
+    `${detection}<div class="actions"><button class="primary-button" data-action="start" type="button" ${disabled ? "disabled" : ""}>${copy.enterFlow}</button></div>`,
     copy.title,
     copy.subtitle,
   );

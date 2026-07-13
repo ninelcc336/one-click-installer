@@ -35,7 +35,7 @@
         "size_bytes": 12386304,
         "sha256": "3a29982008bbf0419999df59ad2bdbf545c3b2bb29d87f2594f260ecacc22346",
         "installer_kind": "windows-msi",
-        "windows_executable": "Programs/CC Switch/CC Switch.exe"
+        "windows_executable": "Programs/CC Switch/cc-switch.exe"
       },
       "macos-x64": {
         "version": "3.16.5",

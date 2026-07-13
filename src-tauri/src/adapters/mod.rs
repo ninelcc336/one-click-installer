@@ -237,18 +237,42 @@ fn expand_windows_paths(relative_or_absolute: &str, install_dir: &Path) -> Vec<P
         return vec![path];
     }
 
-    let mut paths = vec![install_dir.join(&path)];
-    paths.extend(
-        [
-            "LOCALAPPDATA",
-            "PROGRAMFILES",
-            "PROGRAMFILES(X86)",
-            "USERPROFILE",
-        ]
-        .into_iter()
-        .filter_map(|name| env::var_os(name).map(PathBuf::from))
-        .map(|root| root.join(&path)),
-    );
+    let mut relative_paths = vec![path.clone()];
+    if path
+        .components()
+        .next()
+        .is_some_and(|component| component.as_os_str().eq_ignore_ascii_case("Programs"))
+    {
+        relative_paths.push(path.iter().skip(1).collect());
+    }
+
+    let mut paths = Vec::new();
+    for relative_path in &relative_paths {
+        let install_dir_is_programs = install_dir
+            .file_name()
+            .is_some_and(|name| name.eq_ignore_ascii_case("Programs"));
+        let relative_path_starts_with_programs = relative_path
+            .components()
+            .next()
+            .is_some_and(|component| component.as_os_str().eq_ignore_ascii_case("Programs"));
+        if !(install_dir_is_programs && relative_path_starts_with_programs) {
+            paths.push(install_dir.join(relative_path));
+        }
+        paths.extend(
+            [
+                "LOCALAPPDATA",
+                "PROGRAMFILES",
+                "PROGRAMFILES(X86)",
+                "USERPROFILE",
+            ]
+            .into_iter()
+            .filter_map(|name| env::var_os(name).map(PathBuf::from))
+            .map(|root| root.join(relative_path)),
+        );
+    }
+
+    paths.sort();
+    paths.dedup();
     paths
 }
 
@@ -360,6 +384,20 @@ mod tests {
         let paths = expand_windows_paths("Codex/Codex.exe", Path::new("C:/Install"));
         assert!(!paths.is_empty());
         assert!(paths.iter().any(|path| path.ends_with("Codex/Codex.exe")));
+    }
+
+    #[test]
+    fn expands_cc_switch_path_under_user_programs_directory() {
+        let paths = expand_windows_paths(
+            "Programs/CC Switch/cc-switch.exe",
+            Path::new("C:/Users/test/AppData/Local/Programs"),
+        );
+        assert!(paths
+            .iter()
+            .any(|path| { path.ends_with("AppData/Local/Programs/CC Switch/cc-switch.exe") }));
+        assert!(!paths.iter().any(|path| {
+            path.ends_with("AppData/Local/Programs/Programs/CC Switch/cc-switch.exe")
+        }));
     }
 
     #[test]

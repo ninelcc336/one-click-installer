@@ -63,7 +63,7 @@ export function mountInstaller(root: HTMLElement): void {
     } else if (action === "install" || action === "retry") {
       await beginInstall();
     } else if (action === "back") {
-      update({ screen: "welcome", preflight: null, preflightLoading: false, selectedApps: [], installDir: "" });
+      update({ screen: "welcome" });
     } else if (action === "choose-dir") {
       try {
         const installDir = await chooseInstallDir();

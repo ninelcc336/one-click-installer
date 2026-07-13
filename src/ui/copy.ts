@@ -2,6 +2,7 @@ export const copy = {
   eyebrow: "安装助手",
   title: "Codex 与 CC Switch",
   subtitle: "自动检测电脑环境，帮助你完成两个应用的安装。",
+  enterFlow: "进入安装流程",
   start: "开始安装",
   detecting: "正在检测电脑…",
   notInstalled: "未安装",

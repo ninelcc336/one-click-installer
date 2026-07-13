@@ -4,9 +4,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "dev": "tauri dev",
+    "dev:web": "vite",
+    "build": "tauri build --bundles nsis",
+    "build:web": "tsc --noEmit && vite build",
+    "package": "tauri build --bundles nsis",
+    "package:all": "tauri build",
+    "package:msi": "tauri build --bundles msi",
+    "preview": "vite preview",
     "test": "vitest run",
+    "check": "npm run test && npm run build:web",
     "tauri": "tauri"
   },
   "devDependencies": {

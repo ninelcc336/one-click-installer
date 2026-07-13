@@ -28,7 +28,7 @@
 - Consumes: `UiState.screen`, `UiState.preflight` and existing click actions.
 - Produces: welcome-only `enterFlow` copy and state-preserving `back` behavior.
 
-- [ ] **Step 1: 为欢迎页增加独立文案**
+- [x] **Step 1: 为欢迎页增加独立文案**
 
 在 `src/ui/copy.ts` 中增加：
 
@@ -38,7 +38,7 @@ enterFlow: "进入安装流程",
 
 并让 `welcomePage()` 使用 `copy.enterFlow`，`preflightPage()` 保持使用 `copy.start`。
 
-- [ ] **Step 2: 保留返回时的状态**
+- [x] **Step 2: 保留返回时的状态**
 
 将 `src/app.ts` 中的返回处理从清空状态：
 
@@ -63,15 +63,15 @@ update({ screen: "welcome" });
 - Consumes: `render(state, root)`。
 - Produces: 文案和状态显示的回归覆盖。
 
-- [ ] **Step 1: 测试欢迎页入口文案**
+- [x] **Step 1: 测试欢迎页入口文案**
 
 渲染带有预检结果的 `welcome` 状态，断言包含“进入安装流程”，且不包含“开始安装”。
 
-- [ ] **Step 2: 测试预检页仍可开始安装**
+- [x] **Step 2: 测试预检页仍可开始安装**
 
 渲染可用应用的 `preflight` 状态，断言安装按钮仍包含“开始安装”且没有 `disabled` 属性。
 
-- [ ] **Step 3: 运行前端测试和构建**
+- [x] **Step 3: 运行前端测试和构建**
 
 ```powershell
 npm run test
@@ -85,6 +85,6 @@ npm run build
 **Files:**
 - None
 
-- [ ] **Step 1: 检查差异**
+- [x] **Step 1: 检查差异**
 
 确认只修改入口文案、返回状态和对应测试，不改变后端检测逻辑。
